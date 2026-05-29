@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -14,6 +14,7 @@ from enlace_core.envelope import create_envelope
 from enlace_core.identity import ServiceIdentity, ServiceRole
 from enlace_core.lineage import Lineage
 from enlace_core.refs import RecipientRef, SourceRef
+from enlace_core.reliability import PipelineStage, create_snapshot
 from enlace_curation.base import ReferenceCurator
 from enlace_retriever.base import BaseRetriever
 from enlace_retriever.protocols import RawFetchResult
@@ -26,7 +27,13 @@ class FakeSourceAdapter:
         return RawFetchResult(
             raw_format="application/json",
             content={"value": 42},
-            metadata={"title": "Metric Alert", "summary": "Value is high"},
+            metadata={
+                "title": "Metric Alert",
+                "summary": "Value is high",
+                "reliability_basis": "fake-adapter",
+            },
+            estimated_reliability=0.9,
+            data_observed_at=datetime.now(tz=UTC) - timedelta(minutes=2),
         )
 
 
@@ -47,18 +54,27 @@ async def test_retriever_pipeline() -> None:
     message = await retriever.retrieve(source)
     assert message.payload.raw_format == "application/json"
     assert message.lineage.retrieval_id is not None
+    assert message.payload.data_reliability.stage == PipelineStage.RETRIEVED
+    assert message.payload.data_reliability.estimated_reliability == 0.9
 
 
 @pytest.mark.asyncio
 async def test_curation_pipeline() -> None:
     source = SourceRef(handle="fake", label="Fake")
     retrieval_id = uuid4()
+    reliability = create_snapshot(
+        source=source,
+        estimated_reliability=0.75,
+        data_observed_at=datetime.now(tz=UTC) - timedelta(minutes=10),
+        stage=PipelineStage.RETRIEVED,
+    )
     retrieved = RetrievedPayload(
         retrieval_id=retrieval_id,
         source=source,
         raw_format="application/json",
         content={"x": 1},
         retrieved_at=datetime.now(tz=UTC),
+        data_reliability=reliability,
         metadata={"title": "Alert", "summary": "Something happened"},
     )
     lineage = Lineage(source=source, retrieval_id=str(retrieval_id))
@@ -75,6 +91,8 @@ async def test_curation_pipeline() -> None:
     curated = await curator.curate(retrieved_message)
     assert curated.payload.title == "Alert"
     assert len(curated.payload.action_hints) >= 1
+    assert curated.payload.data_reliability.stage == PipelineStage.CURATED
+    assert curated.payload.data_reliability.source == source
 
 
 @pytest.mark.asyncio
@@ -87,6 +105,12 @@ async def test_action_idempotency() -> None:
     )
     source = SourceRef(handle="fake", label="Fake")
     lineage = Lineage(source=source)
+    reliability = create_snapshot(
+        source=source,
+        estimated_reliability=0.7,
+        data_observed_at=datetime.now(tz=UTC) - timedelta(minutes=1),
+        stage=PipelineStage.CURATED,
+    )
     curated_payload = CuratedPayload(
         curation_id=uuid4(),
         title="Alert",
@@ -95,6 +119,7 @@ async def test_action_idempotency() -> None:
             ActionHint(hint_id="h1", action_type="notify", label="Notify", params={})
         ],
         priority=Priority.NORMAL,
+        data_reliability=reliability,
     )
     message = create_envelope(
         payload=curated_payload,
@@ -106,6 +131,7 @@ async def test_action_idempotency() -> None:
     assert first[0].payload.status.value == "succeeded"
     assert second[0].payload.status.value == "skipped"
     assert len(adapter.deliveries) == 1
+    assert first[0].payload.data_reliability.stage == PipelineStage.ACTION
 
 
 @pytest.mark.asyncio
@@ -135,3 +161,4 @@ async def test_in_memory_bus_end_to_end() -> None:
 
     assert len(curated_messages) == 1
     assert curated_messages[0].payload.title == "Metric Alert"
+    assert curated_messages[0].payload.data_reliability.data_age_seconds >= 0

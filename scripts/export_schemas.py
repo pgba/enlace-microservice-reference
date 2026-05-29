@@ -11,8 +11,10 @@ from enlace_contracts.curation import CuratedPayload
 from enlace_contracts.messages import ActionResultMessage, CuratedMessage, RetrievedMessage
 from enlace_contracts.retrieved import RetrievedPayload
 from enlace_core.envelope import Envelope
+from enlace_core.reliability import DataReliabilitySnapshot
 
 MODELS: dict[str, type] = {
+    "DataReliabilitySnapshot": DataReliabilitySnapshot,
     "RetrievedPayload": RetrievedPayload,
     "CuratedPayload": CuratedPayload,
     "ActionResult": ActionResult,

@@ -8,6 +8,7 @@ from enlace_core.envelope import create_envelope, extend_lineage
 from enlace_core.errors import EnlaceError
 from enlace_core.identity import ServiceIdentity
 from enlace_core.refs import RecipientRef
+from enlace_core.reliability import PipelineStage, advance_snapshot
 
 from enlace_action.idempotency import IdempotencyStore
 from enlace_action.protocols import ActionExecutor, DeliveryBody, RecipientAdapter
@@ -29,6 +30,11 @@ class BaseActionExecutor(ActionExecutor):
         results: list[ActionResultMessage] = []
         for hint in message.payload.action_hints:
             idempotency_key = f"{message.correlation_id}:{hint.hint_id}"
+            data_reliability = advance_snapshot(
+                message.payload.data_reliability,
+                stage=PipelineStage.ACTION,
+                reliability_basis="action-stage-snapshot",
+            )
             if await self._idempotency_store.seen(idempotency_key):
                 result = ActionResult(
                     action_id=uuid4(),
@@ -38,6 +44,7 @@ class BaseActionExecutor(ActionExecutor):
                         handle=hint.params.get("recipient_handle", "default"),
                         label=hint.params.get("recipient_handle", "default"),
                     ),
+                    data_reliability=data_reliability,
                     outcome="Duplicate action skipped",
                 )
             else:
@@ -58,6 +65,7 @@ class BaseActionExecutor(ActionExecutor):
                         idempotency_key=idempotency_key,
                         status=ActionStatus.SUCCEEDED,
                         recipient=recipient,
+                        data_reliability=data_reliability,
                         outcome=outcome.outcome,
                     )
                 else:
@@ -66,6 +74,7 @@ class BaseActionExecutor(ActionExecutor):
                         idempotency_key=idempotency_key,
                         status=ActionStatus.FAILED,
                         recipient=recipient,
+                        data_reliability=data_reliability,
                         error=EnlaceError(
                             code="delivery_failed",
                             message=outcome.error_message or "Delivery failed",
@@ -77,6 +86,7 @@ class BaseActionExecutor(ActionExecutor):
                 message,
                 producer=self._identity,
                 hop_id=str(result.action_id),
+                data_reliability=data_reliability,
             )
             results.append(
                 create_envelope(
