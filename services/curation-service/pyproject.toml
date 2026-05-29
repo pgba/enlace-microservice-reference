@@ -1,0 +1,29 @@
+[project]
+name = "curation-service"
+version = "0.1.0"
+description = "Reference curation microservice"
+requires-python = ">=3.12"
+dependencies = [
+    "enlace-contracts",
+    "enlace-core",
+    "enlace-curation",
+    "enlace-transport",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/curation_service"]
+
+[tool.uv.sources]
+enlace-core = { workspace = true }
+enlace-contracts = { workspace = true }
+enlace-curation = { workspace = true }
+enlace-transport = { workspace = true }
+
+[project.scripts]
+curation-service = "curation_service.main:run"

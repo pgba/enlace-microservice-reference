@@ -1,0 +1,6 @@
+{
+  "title": "Sample Alert",
+  "summary": "Temperature exceeded threshold in zone A",
+  "priority": "high",
+  "recipient_handle": "ops-team"
+}

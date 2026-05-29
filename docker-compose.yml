@@ -1,0 +1,66 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  httpbin:
+    image: mccutchen/go-httpbin:latest
+    ports:
+      - "8080:8080"
+
+  retriever:
+    build:
+      context: .
+      args:
+        SERVICE: retriever-service
+    command: ["uv", "run", "retriever-service"]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      PORT: "8001"
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./fixtures:/fixtures:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  curation:
+    build:
+      context: .
+      args:
+        SERVICE: curation-service
+    command: ["uv", "run", "curation-service"]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      PORT: "8002"
+    ports:
+      - "8002:8002"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  action:
+    build:
+      context: .
+      args:
+        SERVICE: action-service
+    command: ["uv", "run", "action-service"]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      PORT: "8003"
+      RECIPIENT_ADAPTER: webhook
+      WEBHOOK_URL: http://httpbin:8080/post
+    ports:
+      - "8003:8003"
+    depends_on:
+      redis:
+        condition: service_healthy
+      httpbin:
+        condition: service_started

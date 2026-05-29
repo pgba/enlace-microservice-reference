@@ -1,0 +1,67 @@
+[project]
+name = "enlace-microservice-reference"
+version = "0.1.0"
+description = "Reference implementation for standardized microservice schemas and contracts"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "enlace-core",
+    "enlace-contracts",
+    "enlace-retriever",
+    "enlace-curation",
+    "enlace-action",
+    "enlace-transport",
+    "enlace-examples",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
+
+[tool.uv.workspace]
+members = [
+    "packages/enlace-core",
+    "packages/enlace-contracts",
+    "packages/enlace-retriever",
+    "packages/enlace-curation",
+    "packages/enlace-action",
+    "packages/enlace-transport",
+    "examples/adapters",
+    "services/retriever-service",
+    "services/curation-service",
+    "services/action-service",
+]
+
+[tool.uv.sources]
+enlace-core = { workspace = true }
+enlace-contracts = { workspace = true }
+enlace-retriever = { workspace = true }
+enlace-curation = { workspace = true }
+enlace-action = { workspace = true }
+enlace-transport = { workspace = true }
+enlace-examples = { workspace = true }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["packages/enlace-core/src", "packages/enlace-contracts/src", "packages/enlace-retriever/src", "packages/enlace-curation/src", "packages/enlace-action/src", "packages/enlace-transport/src", "examples/adapters/src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["redis.*"]
+ignore_missing_imports = true
