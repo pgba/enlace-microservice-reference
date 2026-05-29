@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+from datetime import UTC, datetime
 from io import StringIO
 from pathlib import Path
 
@@ -19,6 +20,7 @@ class FileSourceAdapter:
 
         suffix = path.suffix.lower()
         text = path.read_text(encoding="utf-8")
+        modified_at = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
 
         if suffix == ".json":
             content = json.loads(text)
@@ -34,5 +36,11 @@ class FileSourceAdapter:
         return RawFetchResult(
             raw_format=raw_format,
             content=content,
-            metadata={"path": str(path), "label": source.label},
+            metadata={
+                "path": str(path),
+                "label": source.label,
+                "reliability_basis": "file-mtime",
+            },
+            estimated_reliability=0.85,
+            data_observed_at=modified_at,
         )

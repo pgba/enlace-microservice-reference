@@ -3,6 +3,7 @@ from typing import Any
 from uuid import UUID
 
 from enlace_core.refs import SourceRef
+from enlace_core.reliability import DataReliabilitySnapshot
 from pydantic import BaseModel, Field
 
 
@@ -14,4 +15,5 @@ class RetrievedPayload(BaseModel):
         ..., description="JSON-safe content or raw string payload"
     )
     retrieved_at: datetime
+    data_reliability: DataReliabilitySnapshot
     metadata: dict[str, str] = Field(default_factory=dict)

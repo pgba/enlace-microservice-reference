@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Protocol
 
 from enlace_contracts.messages import RetrievedMessage
@@ -11,6 +12,16 @@ class RawFetchResult(BaseModel):
     raw_format: str = Field(..., min_length=1)
     content: dict[str, Any] | list[Any] | str
     metadata: dict[str, str] = Field(default_factory=dict)
+    estimated_reliability: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Adapter-provided reliability estimate for the source",
+    )
+    data_observed_at: datetime | None = Field(
+        default=None,
+        description="When the source data was observed; defaults to fetch time",
+    )
 
 
 class SourceAdapter(Protocol):

@@ -3,6 +3,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
+from enlace_core.reliability import DataReliabilitySnapshot
 from pydantic import BaseModel, Field
 
 
@@ -42,3 +43,4 @@ class CuratedPayload(BaseModel):
     action_hints: list[ActionHint] = Field(default_factory=list)
     priority: Priority = Priority.NORMAL
     expires_at: datetime | None = None
+    data_reliability: DataReliabilitySnapshot

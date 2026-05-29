@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 
 from enlace_core.refs import SourceRef
+from enlace_core.reliability import DataReliabilitySnapshot
 
 
 class LineageHop(BaseModel):
@@ -8,6 +9,7 @@ class LineageHop(BaseModel):
     role: str
     hop_id: str
     occurred_at: str
+    data_reliability: DataReliabilitySnapshot | None = None
 
 
 class Lineage(BaseModel):

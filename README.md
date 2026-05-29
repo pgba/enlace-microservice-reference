@@ -58,7 +58,7 @@ ENLACE_INTEGRATION=1 uv run pytest tests/integration/test_compose.py
 
 ```
 packages/
-  enlace-core/        Shared envelope, lineage, errors
+  enlace-core/        Shared envelope, lineage, errors, data reliability snapshots
   enlace-contracts/   Boundary payloads (retrieved, curated, action-result)
   enlace-retriever/   Retriever protocol + BaseRetriever
   enlace-curation/    Curator protocol + ReferenceCurator

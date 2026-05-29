@@ -20,6 +20,30 @@ Every inter-service message uses `Envelope[T]` from `enlace-core`:
 - `payload` — typed contract body
 - `lineage` — provenance (`source`, `retrieval_id`, `curation_id`, hop history)
 
+## Data reliability
+
+Each contract payload carries a `DataReliabilitySnapshot` recording the pipeline stage, source identity, estimated reliability (0–1), and data age:
+
+| Stage | Field location | Recorded by |
+|-------|----------------|-------------|
+| Retrieved | `RetrievedPayload.data_reliability` | Retriever (from adapter estimate + observed time) |
+| Curated | `CuratedPayload.data_reliability` | Curator (refreshed age; optional staleness adjustment) |
+| Action | `ActionResult.data_reliability` | Action executor (refreshed age at delivery) |
+
+`DataReliabilitySnapshot` fields:
+
+- `source` — `SourceRef` for the originating data source
+- `estimated_reliability` — adapter or stage-specific score from 0 to 1
+- `data_observed_at` — when the underlying source data was last known valid
+- `snapshot_at` — when the current stage recorded its reading
+- `data_age_seconds` — age of source data at `snapshot_at`
+- `stage` — `retrieved`, `curated`, or `action`
+- `reliability_basis` — optional explanation (e.g. `file-mtime`, `curator-staleness-adjustment`)
+
+Lineage hops may also attach `data_reliability` when a stage completes. Helpers in `enlace_core.reliability` (`create_snapshot`, `advance_snapshot`) propagate source and observed time while recalculating age at each hop.
+
+Source adapters supply initial estimates via `RawFetchResult.estimated_reliability` and `RawFetchResult.data_observed_at`.
+
 ## Contracts
 
 | Contract | Topic | Producer | Consumer |
@@ -69,7 +93,7 @@ Topics: `retrieved`, `curated`, `action-result`.
 - **Minor** — additive fields only; older consumers remain compatible
 - **Patch** — documentation or non-serialized changes
 
-Current schema version: `1.0.0` (`enlace_core.versioning.CURRENT_SCHEMA_VERSION`).
+Current schema version: `1.1.0` (`enlace_core.versioning.CURRENT_SCHEMA_VERSION`).
 
 Golden JSON fixtures live in `tests/contract/fixtures/`. Export schemas with:
 

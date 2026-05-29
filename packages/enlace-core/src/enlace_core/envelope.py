@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from enlace_core.identity import ServiceIdentity
 from enlace_core.lineage import Lineage, LineageHop
+from enlace_core.reliability import DataReliabilitySnapshot
 from enlace_core.versioning import CURRENT_SCHEMA_VERSION
 
 
@@ -49,12 +50,14 @@ def extend_lineage[T: BaseModel](
     hop_id: str,
     retrieval_id: str | None = None,
     curation_id: str | None = None,
+    data_reliability: DataReliabilitySnapshot | None = None,
 ) -> Lineage:
     hop = LineageHop(
         service=producer.name,
         role=producer.role.value,
         hop_id=hop_id,
         occurred_at=datetime.now(tz=UTC).isoformat(),
+        data_reliability=data_reliability,
     )
     return envelope.lineage.model_copy(
         update={
